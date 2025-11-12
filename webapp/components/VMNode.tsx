@@ -146,7 +146,7 @@ function VMNode({ data, id }: VMNodeProps) {
         getStatusColor()
       )}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-black" />
+      <Handle type="target" position={Position.Left} className="w-3 h-3 !bg-black" />
 
       {/* Header */}
       <div className="px-4 py-3 bg-black border-b border-black">
@@ -247,9 +247,9 @@ function VMNode({ data, id }: VMNodeProps) {
                     {copyStatusLabel()}
                   </button>
                 </div>
-                <p className="mt-1 text-[13px] font-mono text-black break-all bg-gray-100 border border-gray-300 px-2 py-1 rounded">
+                <div className="mt-1 text-[13px] font-mono text-black bg-gray-100 border border-gray-300 px-2 py-1 rounded overflow-x-auto whitespace-nowrap">
                   {vmData.sshCommand}
-                </p>
+                </div>
               </div>
             )}
           </div>
@@ -301,7 +301,7 @@ function VMNode({ data, id }: VMNodeProps) {
         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-black" />
+      <Handle type="source" position={Position.Right} className="w-3 h-3 !bg-black" />
     </div>
   );
 }

@@ -9,7 +9,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import VMNode from './VMNode';
-import { VMConfiguration, NodeData, PredefinedMachine } from '@/types/vm';
+import ResourceNode from './ResourceNode';
+import { VMConfiguration, NodeData, PredefinedMachine, Resource } from '@/types/vm';
 import { createMachine, updateMachineConfig, deleteMachineById } from '@/lib/api-client';
 
 // Type helpers for ReactFlow nodes and edges
@@ -35,6 +36,7 @@ type Connection = {
 
 const nodeTypes = {
   vmNode: VMNode,
+  resourceNode: ResourceNode,
 };
 
 export default function VMCanvas() {
@@ -94,7 +96,7 @@ export default function VMCanvas() {
       const data = event.dataTransfer.getData('application/reactflow');
       if (!data) return;
 
-      const machine: PredefinedMachine = JSON.parse(data);
+      const droppedData = JSON.parse(data);
 
       if (reactFlowInstance && reactFlowWrapper.current) {
         const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
@@ -103,8 +105,31 @@ export default function VMCanvas() {
           y: event.clientY - reactFlowBounds.top,
         });
 
-        const newNode = await createVMNode(machine, position);
-        setNodes((nds: Node<NodeData>[]) => nds.concat(newNode));
+        // Check if it's a resource or a machine
+        if (droppedData.isResource) {
+          // Create resource node
+          const resource: Resource = droppedData;
+          const id = `resource-${Date.now()}-${nodeIdCounter.current++}`;
+
+          const newNode: Node<Resource> = {
+            id,
+            type: 'resourceNode',
+            position,
+            data: {
+              id: resource.id,
+              name: resource.name,
+              type: resource.type,
+              description: resource.description,
+            },
+          };
+
+          setNodes((nds: Node<any>[]) => nds.concat(newNode));
+        } else {
+          // Create VM node
+          const machine: PredefinedMachine = droppedData;
+          const newNode = await createVMNode(machine, position);
+          setNodes((nds: Node<NodeData>[]) => nds.concat(newNode));
+        }
       }
     },
     [reactFlowInstance, setNodes]

@@ -61,3 +61,12 @@ export interface DeploymentResponse {
   sshCommand?: string;
   error?: string;
 }
+
+export type ResourceType = 'database' | 'account' | 'project';
+
+export interface Resource {
+  id: string;
+  name: string;
+  type: ResourceType;
+  description?: string;
+}

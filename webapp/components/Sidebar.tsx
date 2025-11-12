@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { predefinedMachines } from '@/lib/predefined-machines';
-import { PredefinedMachine, VMConfiguration } from '@/types/vm';
-import { Server, Sparkles } from 'lucide-react';
+import { predefinedResources } from '@/lib/predefined-resources';
+import { PredefinedMachine, VMConfiguration, Resource } from '@/types/vm';
+import { Server, Sparkles, Database, UserCircle, FolderGit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getRegionDisplayName } from '@/lib/regions';
 import { selectBestMachine } from '@/lib/ai-machine-selector';
@@ -12,12 +13,30 @@ interface SidebarProps {
   onCreateCustomMachine: (config: Partial<VMConfiguration>) => void;
 }
 
+const getResourceIcon = (type: Resource['type']) => {
+  switch (type) {
+    case 'database':
+      return Database;
+    case 'account':
+      return UserCircle;
+    case 'project':
+      return FolderGit;
+    default:
+      return Server;
+  }
+};
+
 export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const onDragStart = (event: React.DragEvent, machine: PredefinedMachine) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify(machine));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onResourceDragStart = (event: React.DragEvent, resource: Resource) => {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({ ...resource, isResource: true }));
     event.dataTransfer.effectAllowed = 'move';
   };
 
@@ -80,7 +99,10 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
     <div className="w-80 bg-white border-r border-black flex flex-col h-screen">
       {/* Header */}
       <div className="p-4">
-        <h2 className="text-xl font-bold text-black">SpawnAI</h2>
+        <div className="flex items-center gap-2">
+          <img src="/logo_green.svg" alt="SpawnAI Logo" className="w-6 h-6" />
+          <h2 className="text-xl font-bold text-black">SpawnAI</h2>
+        </div>
       </div>
 
       {/* Predefined Machines */}
@@ -121,6 +143,41 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
             </div>
           ))}
         </div>
+
+        {/* Resources Section */}
+        <h3 className="text-xs font-semibold text-gray-500 mb-3 mt-6 uppercase tracking-wide">
+          Resources
+        </h3>
+        <div className="space-y-2">
+          {predefinedResources.map((resource) => {
+            const IconComponent = getResourceIcon(resource.type);
+            return (
+              <div
+                key={resource.id}
+                draggable
+                onDragStart={(e) => onResourceDragStart(e, resource)}
+                className="p-3 bg-white border border-black rounded-lg cursor-move hover:bg-gray-50 transition-all group"
+              >
+                <div className="flex items-start gap-2">
+                  <IconComponent className="w-4 h-4 text-black mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-black">
+                      {resource.name}
+                    </h4>
+                    {resource.description && (
+                      <p className="text-xs text-gray-500 mt-1">{resource.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      <span className="px-2 py-0.5 bg-white border border-black rounded text-black text-xs">
+                        {resource.type}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
 
@@ -128,7 +185,7 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
       <div className="p-4 border-t border-black">
         <div className="flex items-start gap-2 mb-2">
           <Sparkles className="w-5 h-5 text-black mt-0.5" />
-          <h3 className="text-sm font-semibold text-black">Create Custom</h3>
+          <h3 className="text-sm font-semibold text-black">Generate configuration</h3>
         </div>
         <textarea
           value={prompt}

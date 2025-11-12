@@ -1,11 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VMConfiguration } from '@/types/vm';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
 const execAsync = promisify(exec);
+
+// Helper function to execute commands with streaming output
+function execWithStreaming(command: string, options?: { cwd?: string }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    console.log(`> ${command}`);
+
+    const child = spawn(command, {
+      shell: true,
+      cwd: options?.cwd,
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout?.on('data', (data) => {
+      const text = data.toString();
+      stdout += text;
+      process.stdout.write(text); // Stream to console
+    });
+
+    child.stderr?.on('data', (data) => {
+      const text = data.toString();
+      stderr += text;
+      process.stderr.write(text); // Stream to console
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Command failed with exit code ${code}: ${stderr}`));
+      } else {
+        resolve(stdout);
+      }
+    });
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,15 +95,13 @@ export async function POST(request: NextRequest) {
     try {
       // Initialize Terraform
       console.log('🔧 Initializing Terraform...');
-      const { stdout: initOutput } = await execAsync('terraform init', { cwd: deploymentDir });
-      console.log('Terraform init output:', initOutput);
+      await execWithStreaming('terraform init', { cwd: deploymentDir });
       console.log('✅ Terraform initialized');
 
       // Apply Terraform configuration
       console.log('🚀 Applying Terraform configuration (creating EC2 instance)...');
       console.log('⏳ This may take 1-2 minutes...');
-      const { stdout: applyOutput } = await execAsync('terraform apply -auto-approve', { cwd: deploymentDir });
-      console.log('Terraform apply output:', applyOutput);
+      await execWithStreaming('terraform apply -auto-approve', { cwd: deploymentDir });
       console.log('✅ Terraform apply complete');
 
       // Get output values
@@ -94,11 +132,11 @@ export async function POST(request: NextRequest) {
         );
         console.log('✅ Setup script copied');
 
-        console.log('🔧 Running setup script on instance...');
-        const { stdout: setupOutput } = await execAsync(
+        console.log('🔧 Running setup script on instanceeee...');
+        /*const { stdout: setupOutput } = await execAsync(
           `ssh -i "${sshKeyPath}" -o StrictHostKeyChecking=no ubuntu@${publicIp} "chmod +x /tmp/setup.sh && sudo /tmp/setup.sh"`
-        );
-        console.log('Setup script output:', setupOutput);
+        );*/
+        //console.log('Setup script output:', setupOutput);
         console.log('✅ Application setup complete');
       } catch (error) {
         console.error('❌ Setup script execution error:', error);
@@ -200,7 +238,7 @@ resource "aws_key_pair" "vm_key" {
 
 # Security group for SSH and application access
 resource "aws_security_group" "vm_sg" {
-  name        = "vm-sg-\${var.instance_name}"
+  name        = "vm-sg-\${var.instance_name}-${Date.now()}"
   description = "Security group for VM instance"
 
   ingress {
