@@ -126,6 +126,27 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Variables
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+}
+
+variable "instance_name" {
+  description = "Name tag for the instance"
+  type        = string
+}
+
+variable "application" {
+  description = "Application to install"
+  type        = string
+}
+
 # Import the public key
 resource "aws_key_pair" "vm_key" {
   key_name   = "${sshKeyName}"

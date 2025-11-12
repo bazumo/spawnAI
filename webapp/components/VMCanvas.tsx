@@ -7,11 +7,31 @@ import {
   useNodesState,
   useEdgesState,
 } from '@xyflow/react';
-import type { Node, Edge, Connection } from '@xyflow/system';
 import '@xyflow/react/dist/style.css';
 import VMNode from './VMNode';
 import { VMConfiguration, NodeData, PredefinedMachine } from '@/types/vm';
 import { createMachine, updateMachineConfig, deleteMachineById } from '@/lib/api-client';
+
+// Type helpers for ReactFlow nodes and edges
+type Node<T = any> = {
+  id: string;
+  type?: string;
+  position: { x: number; y: number };
+  data: T;
+};
+
+type Edge = {
+  id: string;
+  source: string;
+  target: string;
+};
+
+type Connection = {
+  source: string | null;
+  target: string | null;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
+};
 
 const nodeTypes = {
   vmNode: VMNode,
@@ -25,7 +45,7 @@ export default function VMCanvas() {
   const nodeIdCounter = useRef(0);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => setEdges((eds: Edge[]) => addEdge(params, eds)),
     [setEdges]
   );
 
@@ -84,7 +104,7 @@ export default function VMCanvas() {
         });
 
         const newNode = await createVMNode(machine, position);
-        setNodes((nds) => nds.concat(newNode));
+        setNodes((nds: Node<NodeData>[]) => nds.concat(newNode));
       }
     },
     [reactFlowInstance, setNodes]
@@ -101,7 +121,7 @@ export default function VMCanvas() {
         : { x: 400, y: 200 };
 
       const newNode = await createVMNode(config, position);
-      setNodes((nds) => nds.concat(newNode));
+      setNodes((nds: Node<NodeData>[]) => nds.concat(newNode));
     },
     [reactFlowInstance, setNodes]
   );
@@ -116,7 +136,7 @@ export default function VMCanvas() {
       }
 
       // Update in UI
-      setNodes((nds) =>
+      setNodes((nds: Node<NodeData>[]) =>
         nds.map((node) => {
           if (node.id === nodeId) {
             return {
@@ -137,7 +157,7 @@ export default function VMCanvas() {
   const handleDeploy = useCallback(
     async (nodeId: string) => {
       // Update status to deploying
-      setNodes((nds) =>
+      setNodes((nds: Node<NodeData>[]) =>
         nds.map((node) => {
           if (node.id === nodeId) {
             return {
@@ -153,7 +173,7 @@ export default function VMCanvas() {
       );
 
       try {
-        const node = nodes.find((n) => n.id === nodeId);
+        const node = nodes.find((n: Node<NodeData>) => n.id === nodeId);
         if (!node) return;
 
         const response = await fetch('/api/deploy', {
@@ -170,8 +190,8 @@ export default function VMCanvas() {
 
         if (result.success) {
           // Update to deployed
-          setNodes((nds) =>
-            nds.map((n) => {
+          setNodes((nds: Node<NodeData>[]) =>
+            nds.map((n: Node<NodeData>) => {
               if (n.id === nodeId) {
                 return {
                   ...n,
@@ -189,8 +209,8 @@ export default function VMCanvas() {
           );
         } else {
           // Update to failed
-          setNodes((nds) =>
-            nds.map((n) => {
+          setNodes((nds: Node<NodeData>[]) =>
+            nds.map((n: Node<NodeData>) => {
               if (n.id === nodeId) {
                 return {
                   ...n,
@@ -206,8 +226,8 @@ export default function VMCanvas() {
         }
       } catch (error) {
         console.error('Deployment error:', error);
-        setNodes((nds) =>
-          nds.map((n) => {
+        setNodes((nds: Node<NodeData>[]) =>
+          nds.map((n: Node<NodeData>) => {
             if (n.id === nodeId) {
               return {
                 ...n,
@@ -235,8 +255,8 @@ export default function VMCanvas() {
       }
 
       // Delete from UI
-      setNodes((nds) => nds.filter((node) => node.id !== nodeId));
-      setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+      setNodes((nds: Node<NodeData>[]) => nds.filter((node) => node.id !== nodeId));
+      setEdges((eds: Edge[]) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     },
     [setNodes, setEdges]
   );

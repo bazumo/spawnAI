@@ -5,6 +5,8 @@ import { predefinedMachines } from '@/lib/predefined-machines';
 import { PredefinedMachine, VMConfiguration } from '@/types/vm';
 import { Server, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getRegionDisplayName } from '@/lib/regions';
+import { selectBestMachine } from '@/lib/ai-machine-selector';
 
 interface SidebarProps {
   onCreateCustomMachine: (config: Partial<VMConfiguration>) => void;
@@ -24,43 +26,54 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
 
     setIsGenerating(true);
 
-    // Simple parsing logic - in production, you'd use an LLM
-    const lower = prompt.toLowerCase();
+    try {
+      // Use AI to select the best predefined machine based on user's prompt
+      const selectedMachine = await selectBestMachine(prompt);
 
-    let region: VMConfiguration['region'] = 'us-east-1';
-    let instanceSize: VMConfiguration['instanceSize'] = 't3.small';
-    let application: VMConfiguration['application'] = 'none';
+      const customConfig: Partial<VMConfiguration> = {
+        name: prompt.slice(0, 50),
+        region: selectedMachine.region,
+        instanceSize: selectedMachine.instanceSize,
+        application: selectedMachine.application,
+      };
 
-    // Parse region
-    if (lower.includes('us-east-1') || lower.includes('us east 1')) region = 'us-east-1';
-    else if (lower.includes('us-east-2') || lower.includes('us east 2')) region = 'us-east-2';
-    else if (lower.includes('us-west-1') || lower.includes('us west 1')) region = 'us-west-1';
-    else if (lower.includes('us-west-2') || lower.includes('us west 2')) region = 'us-west-2';
-    else if (lower.includes('eu-west') || lower.includes('europe')) region = 'eu-west-1';
-    else if (lower.includes('eu-central')) region = 'eu-central-1';
-    else if (lower.includes('asia') || lower.includes('tokyo')) region = 'ap-northeast-1';
+      onCreateCustomMachine(customConfig);
+      setPrompt('');
+    } catch (error) {
+      console.error('Error generating custom machine:', error);
+      // Fallback to simple parsing if AI fails
+      const lower = prompt.toLowerCase();
 
-    // Parse instance size
-    if (lower.includes('micro')) instanceSize = 't3.micro';
-    else if (lower.includes('small')) instanceSize = 't3.small';
-    else if (lower.includes('medium')) instanceSize = 't3.medium';
-    else if (lower.includes('large') && lower.includes('xlarge')) instanceSize = 'm5.xlarge';
-    else if (lower.includes('large')) instanceSize = 't3.large';
+      let region: VMConfiguration['region'] = 'us-east-1';
+      let instanceSize: VMConfiguration['instanceSize'] = 't3.small';
+      let application: VMConfiguration['application'] = 'none';
 
-    // Parse application
-    if (lower.includes('vscode') || lower.includes('vs code')) application = 'vscode';
-    else if (lower.includes('claude')) application = 'claude-code';
+      // Parse region - support both codes and city names
+      if (lower.includes('us-east-1') || lower.includes('us east 1') || lower.includes('virginia')) region = 'us-east-1';
+      else if (lower.includes('us-west-1') || lower.includes('us west 1') || lower.includes('san francisco')) region = 'us-west-1';
+      else if (lower.includes('eu-central') || lower.includes('frankfurt')) region = 'eu-central-1';
+      else if (lower.includes('asia') || lower.includes('tokyo')) region = 'ap-northeast-1';
 
-    const customConfig: Partial<VMConfiguration> = {
-      name: prompt.slice(0, 50),
-      region,
-      instanceSize,
-      application,
-    };
+      // Parse instance size
+      if (lower.includes('micro')) instanceSize = 't2.micro';
+      else if (lower.includes('large')) instanceSize = 't3.large';
 
-    onCreateCustomMachine(customConfig);
-    setPrompt('');
-    setIsGenerating(false);
+      // Parse application
+      if (lower.includes('vscode') || lower.includes('vs code')) application = 'vscode';
+      else if (lower.includes('claude')) application = 'claude-code';
+
+      const customConfig: Partial<VMConfiguration> = {
+        name: prompt.slice(0, 50),
+        region,
+        instanceSize,
+        application,
+      };
+
+      onCreateCustomMachine(customConfig);
+      setPrompt('');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -120,7 +133,7 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
                   <p className="text-xs text-gray-500 mt-1">{machine.description}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
                     <span className="px-2 py-0.5 bg-white border border-black text-black text-xs">
-                      {machine.region}
+                      {getRegionDisplayName(machine.region)}
                     </span>
                     <span className="px-2 py-0.5 bg-white border border-black text-black text-xs">
                       {machine.instanceSize}

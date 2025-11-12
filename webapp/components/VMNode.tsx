@@ -1,22 +1,13 @@
 'use client';
 
 import { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { NodeData, AWSRegion, EC2InstanceSize, ApplicationType } from '@/types/vm';
 import { Server, Trash2, Rocket, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getRegionDisplayName, getRegionsWithDisplayNames } from '@/lib/regions';
 
-const awsRegions: AWSRegion[] = [
-  'us-east-1',
-  'us-east-2',
-  'us-west-1',
-  'us-west-2',
-  'eu-west-1',
-  'eu-central-1',
-  'ap-northeast-1',
-  'ap-southeast-1',
-  'ap-southeast-2',
-];
+const awsRegionsWithNames = getRegionsWithDisplayNames();
 
 const ec2Sizes: EC2InstanceSize[] = [
   't2.micro',
@@ -34,7 +25,12 @@ const ec2Sizes: EC2InstanceSize[] = [
 
 const applications: ApplicationType[] = ['none', 'vscode', 'claude-code'];
 
-function VMNode({ data, id }: NodeProps) {
+interface VMNodeProps {
+  data: any;
+  id: string;
+}
+
+function VMNode({ data, id }: VMNodeProps) {
   const vmData = data as unknown as NodeData;
 
   const handleChange = (field: keyof NodeData, value: string) => {
@@ -109,9 +105,9 @@ function VMNode({ data, id }: NodeProps) {
             disabled={vmData.isDeployed}
             className="w-full px-3 py-2 bg-white border border-black text-sm text-black focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {awsRegions.map((region) => (
-              <option key={region} value={region}>
-                {region}
+            {awsRegionsWithNames.map((region) => (
+              <option key={region.code} value={region.code}>
+                {region.name}
               </option>
             ))}
           </select>
