@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { NodeData, AWSRegion, EC2InstanceSize, ApplicationType } from '@/types/vm';
 import { Server, Trash2, Rocket, CheckCircle, XCircle, Loader2, Copy, Check } from 'lucide-react';
@@ -33,6 +33,9 @@ interface VMNodeProps {
 function VMNode({ data, id }: VMNodeProps) {
   const vmData = data as unknown as NodeData;
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [statusMessageIndex, setStatusMessageIndex] = useState(0);
+
+  const statusMessages = ['Cooking...', 'Spawning...', 'Shelling...', 'Generating...'];
 
   // Debug log to verify component rendering
   console.log('VMNode rendered:', {
@@ -42,6 +45,17 @@ function VMNode({ data, id }: VMNodeProps) {
     deploymentStatus: vmData.deploymentStatus,
     isDeployed: vmData.isDeployed
   });
+
+  // Cycle through status messages when deploying
+  useEffect(() => {
+    if (vmData.deploymentStatus === 'deploying') {
+      const interval = setInterval(() => {
+        setStatusMessageIndex((prevIndex) => (prevIndex + 1) % statusMessages.length);
+      }, 1500); // Change message every 1.5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [vmData.deploymentStatus, statusMessages.length]);
 
   const handleChange = (field: keyof NodeData, value: string) => {
     if (vmData.onChange) {
@@ -251,14 +265,9 @@ function VMNode({ data, id }: VMNodeProps) {
         {vmData.deploymentStatus === 'deploying' && (
           <div className="px-3 py-2 bg-blue-50 border border-blue-300 text-xs text-black space-y-1">
             <div className="flex items-center gap-2">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span className="font-medium">Deployment in progress...</span>
+              <span className="font-medium">{statusMessages[statusMessageIndex]}</span>
             </div>
-            <div className="text-gray-600 ml-5">
-              • Creating EC2 instance with Terraform<br />
-              • This may take 1-2 minutes<br />
-              • Check console for detailed progress
-            </div>
+
           </div>
         )}
 
