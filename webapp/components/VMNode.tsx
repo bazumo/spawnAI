@@ -1,9 +1,9 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { NodeData, AWSRegion, EC2InstanceSize, ApplicationType } from '@/types/vm';
-import { Server, Trash2, Rocket, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Server, Trash2, Rocket, CheckCircle, XCircle, Loader2, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getRegionDisplayName, getRegionsWithDisplayNames } from '@/lib/regions';
 
@@ -32,6 +32,16 @@ interface VMNodeProps {
 
 function VMNode({ data, id }: VMNodeProps) {
   const vmData = data as unknown as NodeData;
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+
+  // Debug log to verify component rendering
+  console.log('VMNode rendered:', {
+    id,
+    name: vmData.name,
+    hasOnDeploy: !!vmData.onDeploy,
+    deploymentStatus: vmData.deploymentStatus,
+    isDeployed: vmData.isDeployed
+  });
 
   const handleChange = (field: keyof NodeData, value: string) => {
     if (vmData.onChange) {
@@ -62,6 +72,56 @@ function VMNode({ data, id }: VMNodeProps) {
         return 'border-2 border-dashed border-black bg-white';
       default:
         return 'border border-black bg-white';
+    }
+  };
+
+  const handleCopySshCommand = async () => {
+    const sshCommand = typeof vmData.sshCommand === 'string' ? vmData.sshCommand : '';
+    if (!sshCommand) {
+      return;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(sshCommand);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = sshCommand;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Failed to copy SSH command:', error);
+      setCopyStatus('error');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    }
+  };
+
+  const copyStatusLabel = () => {
+    switch (copyStatus) {
+      case 'copied':
+        return (
+          <>
+            <Check className="w-3 h-3" />
+            Copied
+          </>
+        );
+      case 'error':
+        return 'Copy failed';
+      default:
+        return (
+          <>
+            <Copy className="w-3 h-3" />
+            Copy
+          </>
+        );
     }
   };
 
@@ -158,6 +218,26 @@ function VMNode({ data, id }: VMNodeProps) {
                 <p className="text-sm font-mono text-black">{vmData.sshKeyName}</p>
               </>
             )}
+            {vmData.sshCommand && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-gray-600">SSH Command:</p>
+                  <button
+                    onClick={handleCopySshCommand}
+                    className={cn(
+                      'px-2 py-1 text-[11px] border border-black text-black flex items-center gap-1 transition-colors',
+                      copyStatus === 'idle' ? 'bg-white hover:bg-gray-100' : 'bg-black text-white'
+                    )}
+                    type="button"
+                  >
+                    {copyStatusLabel()}
+                  </button>
+                </div>
+                <p className="mt-1 text-[13px] font-mono text-black break-all bg-gray-100 border border-gray-300 px-2 py-1 rounded">
+                  {vmData.sshCommand}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -169,15 +249,26 @@ function VMNode({ data, id }: VMNodeProps) {
         )}
 
         {vmData.deploymentStatus === 'deploying' && (
-          <div className="px-3 py-2 bg-gray-100 border border-gray-400 text-xs text-black">
-            ⋯ Deploying VM and installing software...
+          <div className="px-3 py-2 bg-blue-50 border border-blue-300 text-xs text-black space-y-1">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="font-medium">Deployment in progress...</span>
+            </div>
+            <div className="text-gray-600 ml-5">
+              • Creating EC2 instance with Terraform<br />
+              • This may take 1-2 minutes<br />
+              • Check console for detailed progress
+            </div>
           </div>
         )}
 
         {/* Deploy Button */}
         {vmData.onDeploy && !vmData.isDeployed && (
           <button
-            onClick={() => vmData.onDeploy!(id)}
+            onClick={() => {
+              console.log('🖱️ Deploy button clicked in VMNode for:', id);
+              vmData.onDeploy!(id);
+            }}
             disabled={vmData.deploymentStatus === 'deploying'}
             className={cn(
               'w-full px-4 py-2 font-medium text-sm flex items-center justify-center gap-2 transition-colors border',

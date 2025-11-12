@@ -156,10 +156,16 @@ export default function VMCanvas() {
 
   const handleDeploy = useCallback(
     async (nodeId: string) => {
-      // Update status to deploying
+      console.log('🎬 Deploy button clicked for node:', nodeId);
+
+      // Get node data and update status to deploying
+      let nodeData: NodeData | null = null;
+
       setNodes((nds: Node<NodeData>[]) =>
         nds.map((node) => {
           if (node.id === nodeId) {
+            // Capture the node data before deploying
+            nodeData = node.data;
             return {
               ...node,
               data: {
@@ -172,9 +178,17 @@ export default function VMCanvas() {
         })
       );
 
+      console.log('✅ UI updated to deploying status');
+
+      if (!nodeData) {
+        console.error('❌ Node not found:', nodeId);
+        console.log('📊 Available nodes:', nodes.map((n: Node<NodeData>) => ({ id: n.id, name: n.data.name })));
+        return;
+      }
+
       try {
-        const node = nodes.find((n: Node<NodeData>) => n.id === nodeId);
-        if (!node) return;
+        console.log('📦 Node data:', nodeData);
+        console.log('🚀 Sending deployment request to /api/deploy...');
 
         const response = await fetch('/api/deploy', {
           method: 'POST',
@@ -182,13 +196,20 @@ export default function VMCanvas() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            vmConfig: node.data,
+            vmConfig: nodeData,
           }),
         });
 
+        console.log('📡 Response status:', response.status);
+
         const result = await response.json();
+        console.log('📥 Response data:', result);
 
         if (result.success) {
+          console.log('✅ Deployment successful!');
+          console.log('🌐 Public IP:', result.publicIp);
+          console.log('🔑 SSH Key:', result.sshKeyName);
+
           // Update to deployed
           setNodes((nds: Node<NodeData>[]) =>
             nds.map((n: Node<NodeData>) => {
@@ -201,13 +222,19 @@ export default function VMCanvas() {
                     deploymentStatus: 'deployed',
                     publicIp: result.publicIp,
                     sshKeyName: result.sshKeyName,
+                    deploymentDir: result.deploymentDir,
+                    sshCommand: result.sshCommand,
                   },
                 };
               }
               return n;
             })
           );
+
+          console.log('🎉 UI updated to deployed status');
         } else {
+          console.error('❌ Deployment failed:', result.error);
+
           // Update to failed
           setNodes((nds: Node<NodeData>[]) =>
             nds.map((n: Node<NodeData>) => {
@@ -223,9 +250,12 @@ export default function VMCanvas() {
               return n;
             })
           );
+
+          console.log('⚠️ UI updated to failed status');
         }
       } catch (error) {
-        console.error('Deployment error:', error);
+        console.error('❌ Deployment exception:', error);
+
         setNodes((nds: Node<NodeData>[]) =>
           nds.map((n: Node<NodeData>) => {
             if (n.id === nodeId) {
@@ -240,6 +270,8 @@ export default function VMCanvas() {
             return n;
           })
         );
+
+        console.log('⚠️ UI updated to failed status due to exception');
       }
     },
     [nodes, setNodes]

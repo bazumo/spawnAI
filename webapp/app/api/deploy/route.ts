@@ -11,65 +11,106 @@ export async function POST(request: NextRequest) {
   try {
     const { vmConfig }: { vmConfig: VMConfiguration } = await request.json();
 
+    console.log('🚀 Starting deployment for VM:', vmConfig.name);
+    console.log('📍 Region:', vmConfig.region);
+    console.log('💻 Instance Size:', vmConfig.instanceSize);
+    console.log('📦 Application:', vmConfig.application);
+
     // Create deployment directory
     const deploymentId = `deployment-${vmConfig.id}-${Date.now()}`;
     const deploymentDir = path.join(process.cwd(), 'deployments', deploymentId);
+    console.log('📁 Creating deployment directory:', deploymentDir);
     await fs.mkdir(deploymentDir, { recursive: true });
 
     // Generate SSH key pair
     const sshKeyName = `vm-key-${vmConfig.id}`;
     const sshKeyPath = path.join(deploymentDir, sshKeyName);
 
+    console.log('🔑 Generating SSH key pair...');
     try {
       await execAsync(`ssh-keygen -t rsa -b 4096 -f "${sshKeyPath}" -N "" -C "${vmConfig.name}"`);
+      console.log('✅ SSH key generated successfully');
     } catch (error) {
-      console.error('SSH key generation error:', error);
+      console.error('❌ SSH key generation error:', error);
     }
 
     // Generate Terraform configuration
+    console.log('📝 Generating Terraform configuration...');
     const terraformConfig = generateTerraformConfig(vmConfig, sshKeyName, sshKeyPath);
     await fs.writeFile(path.join(deploymentDir, 'main.tf'), terraformConfig);
+    console.log('✅ main.tf created');
 
     // Generate variables file
     const tfvarsContent = generateTfvars(vmConfig);
     await fs.writeFile(path.join(deploymentDir, 'terraform.tfvars'), tfvarsContent);
+    console.log('✅ terraform.tfvars created');
 
     // Generate setup script
     const setupScript = generateSetupScript(vmConfig);
     await fs.writeFile(path.join(deploymentDir, 'setup.sh'), setupScript);
     await execAsync(`chmod +x "${path.join(deploymentDir, 'setup.sh')}"`);
+    console.log('✅ setup.sh created');
 
     // Initialize and apply Terraform
     try {
       // Initialize Terraform
-      await execAsync('terraform init', { cwd: deploymentDir });
+      console.log('🔧 Initializing Terraform...');
+      const { stdout: initOutput } = await execAsync('terraform init', { cwd: deploymentDir });
+      console.log('Terraform init output:', initOutput);
+      console.log('✅ Terraform initialized');
 
       // Apply Terraform configuration
-      await execAsync('terraform apply -auto-approve', { cwd: deploymentDir });
+      console.log('🚀 Applying Terraform configuration (creating EC2 instance)...');
+      console.log('⏳ This may take 1-2 minutes...');
+      const { stdout: applyOutput } = await execAsync('terraform apply -auto-approve', { cwd: deploymentDir });
+      console.log('Terraform apply output:', applyOutput);
+      console.log('✅ Terraform apply complete');
 
       // Get output values
+      console.log('📊 Getting instance details...');
       const { stdout: ipOutput } = await execAsync('terraform output -raw public_ip', {
         cwd: deploymentDir,
       });
       const publicIp = ipOutput.trim();
+      console.log('✅ Public IP:', publicIp);
+
+      const sshCommand = `ssh -i "${sshKeyPath}" ubuntu@${publicIp}`;
+      console.log('🔐 SSH Command:', sshCommand);
 
       // Wait for instance to be ready
+      console.log('⏳ Waiting 30 seconds for instance to boot...');
       await new Promise((resolve) => setTimeout(resolve, 30000));
+      console.log('✅ Instance should be ready');
 
       // Run setup script on the instance
+      console.log('📦 Installing applications on the instance...');
       try {
+        console.log('📤 Copying setup script to instance...');
         await execAsync(
           `scp -i "${sshKeyPath}" -o StrictHostKeyChecking=no "${path.join(
             deploymentDir,
             'setup.sh'
           )}" ubuntu@${publicIp}:/tmp/setup.sh`
         );
-        await execAsync(
+        console.log('✅ Setup script copied');
+
+        console.log('🔧 Running setup script on instance...');
+        const { stdout: setupOutput } = await execAsync(
           `ssh -i "${sshKeyPath}" -o StrictHostKeyChecking=no ubuntu@${publicIp} "chmod +x /tmp/setup.sh && sudo /tmp/setup.sh"`
         );
+        console.log('Setup script output:', setupOutput);
+        console.log('✅ Application setup complete');
       } catch (error) {
-        console.error('Setup script execution error:', error);
+        console.error('❌ Setup script execution error:', error);
+        console.log('⚠️ Instance created but application installation may have failed');
       }
+
+      console.log('🎉 Deployment complete!');
+      console.log('📝 Summary:');
+      console.log('  - VM ID:', vmConfig.id);
+      console.log('  - Public IP:', publicIp);
+      console.log('  - SSH Key:', sshKeyName);
+      console.log('  - Deployment Dir:', deploymentDir);
 
       return NextResponse.json({
         success: true,
@@ -77,26 +118,30 @@ export async function POST(request: NextRequest) {
         publicIp,
         sshKeyName,
         deploymentDir,
+        sshCommand,
       });
     } catch (error) {
-      console.error('Terraform error:', error);
+      console.error('❌ Terraform error:', error);
+      console.log('🧹 Attempting cleanup...');
+
       // Cleanup on failure
       try {
         await execAsync('terraform destroy -auto-approve', { cwd: deploymentDir });
+        console.log('✅ Cleanup complete');
       } catch (cleanupError) {
-        console.error('Cleanup error:', cleanupError);
+        console.error('❌ Cleanup error:', cleanupError);
       }
 
       return NextResponse.json(
         {
           success: false,
-          error: 'Terraform deployment failed',
+          error: 'Terraform deployment failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Deployment error:', error);
+    console.error('❌ Deployment error:', error);
     return NextResponse.json(
       {
         success: false,

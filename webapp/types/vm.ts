@@ -37,6 +37,8 @@ export interface VMConfiguration {
   deploymentStatus?: 'pending' | 'deploying' | 'deployed' | 'failed';
   publicIp?: string;
   sshKeyName?: string;
+  deploymentDir?: string;
+  sshCommand?: string;
 }
 
 export interface PredefinedMachine {
@@ -60,5 +62,7 @@ export interface DeploymentResponse {
   vmId: string;
   publicIp?: string;
   sshKeyName?: string;
+  deploymentDir?: string;
+  sshCommand?: string;
   error?: string;
 }
