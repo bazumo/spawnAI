@@ -333,6 +333,22 @@ chmod +x ~/start-claude-code.sh
 `;
       break;
 
+    case 'slate':
+      appInstallScript = `
+# Install Node.js (required for Slate)
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Slate CLI
+sudo npm install -g @randomlabs/slatecli
+
+# Verify installation
+echo "Node version: $(node --version)"
+echo "npm version: $(npm --version)"
+echo "Slate CLI installed successfully"
+`;
+      break;
+
     default:
       appInstallScript = '# No application to install';
   }

@@ -79,42 +79,14 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
   return (
     <div className="w-80 bg-white border-r border-black flex flex-col h-screen">
       {/* Header */}
-      <div className="p-4 border-b border-black">
-        <h2 className="text-xl font-bold text-black">VM Instances</h2>
-        <p className="text-sm text-gray-600 mt-1">Drag machines to canvas</p>
-      </div>
-
-      {/* Custom Machine Prompt */}
-      <div className="p-4 border-b border-black">
-        <div className="flex items-start gap-2 mb-2">
-          <Sparkles className="w-5 h-5 text-black mt-0.5" />
-          <h3 className="text-sm font-semibold text-black">Create Custom</h3>
-        </div>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="e.g., 'VS Code instance in US East with medium size'"
-          className="w-full px-3 py-2 bg-white border border-black text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-black resize-none"
-          rows={3}
-        />
-        <button
-          onClick={handleGenerateCustomMachine}
-          disabled={!prompt.trim() || isGenerating}
-          className={cn(
-            'w-full mt-2 px-4 py-2 text-sm font-medium transition-colors border',
-            prompt.trim() && !isGenerating
-              ? 'bg-black text-white border-black hover:bg-gray-900'
-              : 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'
-          )}
-        >
-          {isGenerating ? 'Generating...' : 'Generate Machine'}
-        </button>
+      <div className="p-4">
+        <h2 className="text-xl font-bold text-black">SpawnAI</h2>
       </div>
 
       {/* Predefined Machines */}
       <div className="flex-1 overflow-y-auto p-4">
         <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">
-          Predefined Machines
+          Machines
         </h3>
         <div className="space-y-2">
           {predefinedMachines.map((machine) => (
@@ -150,6 +122,35 @@ export default function Sidebar({ onCreateCustomMachine }: SidebarProps) {
           ))}
         </div>
       </div>
+
+
+      {/* Custom Machine Prompt */}
+      <div className="p-4 border-t border-black">
+        <div className="flex items-start gap-2 mb-2">
+          <Sparkles className="w-5 h-5 text-black mt-0.5" />
+          <h3 className="text-sm font-semibold text-black">Create Custom</h3>
+        </div>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Machine to vibe code in Tokyo with a big GPU"
+          className="w-full px-3 py-2 bg-white border border-black text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-black resize-none"
+          rows={3}
+        />
+        <button
+          onClick={handleGenerateCustomMachine}
+          disabled={!prompt.trim() || isGenerating}
+          className={cn(
+            'w-full mt-2 px-4 py-2 text-sm font-medium transition-colors border',
+            prompt.trim() && !isGenerating
+              ? 'bg-black text-white border-black hover:bg-gray-900'
+              : 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'
+          )}
+        >
+          {isGenerating ? 'Generating...' : 'Generate Machine'}
+        </button>
+      </div>
+
     </div>
   );
 }

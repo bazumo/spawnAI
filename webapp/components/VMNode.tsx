@@ -23,7 +23,7 @@ const ec2Sizes: EC2InstanceSize[] = [
   'c5.xlarge',
 ];
 
-const applications: ApplicationType[] = ['none', 'vscode', 'claude-code'];
+const applications: ApplicationType[] = ['none', 'vscode', 'claude-code', 'slate'];
 
 interface VMNodeProps {
   data: any;

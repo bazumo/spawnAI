@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactFlow } from '@xyflow/react';
+import { ReactFlow, Background } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Sidebar from '@/components/Sidebar';
 import VMCanvas from '@/components/VMCanvas';
@@ -37,7 +37,9 @@ export default function Home() {
           nodeTypes={nodeTypes}
           fitView
           className="bg-white"
-        />
+        >
+          <Background variant="dots" gap={16} size={1} color="#d3d3d3" />
+        </ReactFlow>
       </div>
     </div>
   );

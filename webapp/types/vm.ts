@@ -19,6 +19,7 @@ export type EC2InstanceSize =
 export type ApplicationType =
   | 'vscode'
   | 'claude-code'
+  | 'slate'
   | 'none';
 
 export interface VMConfiguration {
