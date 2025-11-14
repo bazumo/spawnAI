@@ -2,4 +2,5 @@
 
 2nd place in VIBE25-5: Welcome to San Fransokyo
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/gRGt1QyRIqw" title="YouTube video player" frameborder="0" allowfullscreen></iframe>
+[![Watch demo video YouTube](https://img.youtube.com/vi/gRGt1QyRIqw/0.jpg)](https://www.youtube.com/watch?v=gRGt1QyRIqw)
+
